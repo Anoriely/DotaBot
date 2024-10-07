@@ -129,6 +129,15 @@ async def how_cool(message: types.Message):
     response = f"Ты гей на {gay_percentage}% 🌈"
     await message.reply(response)
 
+@dp.message(Command(commands=['info']))
+async def info(message: types.Message):
+    if message.date < bot_start_time:
+        logger.info(f"Сообщение от {message.from_user.id} проигнорировано (старое сообщение).")
+        return  # Игнорируем сообщение, если оно отправлено до старта бота
+    
+    response = f"Хочешь узнать как я работаю? 🤖\nВся информация тут - https://github.com/Anoriely/DotaBot"
+    await message.reply(response)
+
 @dp.message(Command(commands=['pingdota']))
 async def ping_users(message: types.Message):
     if message.chat.type == "private":
@@ -316,6 +325,7 @@ async def main():
         types.BotCommand(command="/time_dota", description="Узнай сколько часов у тебя в доте!"),
         types.BotCommand(command="/top_dota", description="Топ пробитых тузов!"),
         types.BotCommand(command="/regsteam", description="Покажи всем насколько ты пробит!"),
+        types.BotCommand(command="/info", description="Все обо мне")
     ])
 
     # Запуск поллинга
