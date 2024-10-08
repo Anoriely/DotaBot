@@ -9,7 +9,18 @@ from dotenv import load_dotenv
 import os
 import json
 import re
+import flask
+from flask import Flask, request
 
+
+app = Flask(__name__)
+
+@app.route('/webhook', methods=['POST'])
+async def webhook():
+    if request.method == 'POST':
+        update = request.get_json()
+        # Здесь обработка обновлений из Telegram API
+        return "OK"
 
 # Логирование ошибок и событий
 logging.basicConfig(
@@ -120,7 +131,7 @@ async def how_cool(message: types.Message):
         logger.info(f"Сообщение от {message.from_user.id} проигнорировано (старое сообщение).")
         return  # Игнорируем сообщение, если оно отправлено до старта бота
     
-    if message.from_user.id == BOSS_USER_ID:
+    if str(message.from_user.id) == str(BOSS_USER_ID):
           gay_percentage = 0
     else:
           # Генерация случайного значения от 50% до 100% для остальных пользователей
@@ -325,7 +336,7 @@ async def show_top_dota2_playtime(message: types.Message):
 
 
 # Основная функция для запуска бота
-async def main():
+async def start_bot():
     # Устанавливаем команды бота (опционально)
     await bot.set_my_commands([
         types.BotCommand(command="/slot", description="Покрутить слоты 🎰"),
@@ -341,7 +352,16 @@ async def main():
     # Запуск поллинга
     await dp.start_polling(bot, skip_updates=True)
 
-if __name__ == '__main__':
+async def run_flask():
+    import uvicorn
+    config = uvicorn.Config(app, host="0.0.0.0", port=8080, log_level="info")
+    server = uvicorn.Server(config)
+    await server.serve()
+
+async def main():
+    await asyncio.gather(run_flask(), start_bot())
+
+if __name__ == '__main__':    
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
