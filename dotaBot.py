@@ -276,11 +276,21 @@ async def show_top_dota2_playtime(message: types.Message):
 
     # Перебираем всех пользователей из списка USER_STEAM_IDS
     for telegram_id, steam_id in USER_STEAM_IDS.items():
-        # Получаем время, проведенное в Dota 2, для каждого Steam ID
-        playtime_hours = get_dota2_playtime(steam_id)
+        try:
+            # Проверяем, есть ли пользователь в текущем чате
+            chat_member = await bot.get_chat_member(message.chat.id, telegram_id)
+            print(f"Пользователь: {telegram_id}, Chat Member Info: {chat_member}")
 
-        # Добавляем данные в список
-        playtime_list.append((telegram_id, playtime_hours))
+
+            # Если пользователь является членом чата (статус не "left" и не "kicked")
+            if chat_member.status in ["member", "administrator", "creator"]:
+                playtime_hours = get_dota2_playtime(steam_id)
+
+            # Добавляем данные в список
+            playtime_list.append((telegram_id, playtime_hours))
+        except Exception as e:
+            logger.warning(f"Не удалось получить информацию о пользователе {telegram_id} в чате {message.chat.id}: {e}")
+            continue
 
     # Сортируем список по количеству часов в убывающем порядке
     playtime_list.sort(key=lambda x: x[1], reverse=True)
