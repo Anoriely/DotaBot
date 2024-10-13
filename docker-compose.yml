@@ -1,0 +1,15 @@
+version: "3"
+services:
+  bot:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - STEAM_API_KEY=${STEAM_API_KEY}
+    volumes:
+      - ./user_data.json:/app/user_data.json
+    ports:
+      - "${PORT}:${PORT}"
+    restart: always
