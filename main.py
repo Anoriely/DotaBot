@@ -106,7 +106,7 @@ def info(message):
     if not is_recent_message(message):
         return
 
-    bot.reply_to(message, "Я бот для игр, статистики и веселья. Исходный код: https://github.com/Anoriely/DotaBot")
+    bot.reply_to(message, "Исходный код: https://github.com/Anoriely/DotaBot")
 
 
 @bot.message_handler(commands=['pingdota'])
@@ -204,7 +204,39 @@ def get_dota2_playtime_command(message):
         logger.error(f"Неизвестная ошибка: {e}")
         bot.reply_to(message, "Не удалось получить данные. Попробуйте позже.")
 
+@bot.message_handler(commands=['top_dota'])
+def top_dota2_playtime(message):
+    if message.chat.type == "private":
+        bot.reply_to(message, "Эта команда доступна только в групповых чатах.")
+        return
 
+    if not is_recent_message(message):
+        logger.info("Сообщение старше 5 минут, игнорируем.")
+        return
+
+    playtime_data = []
+
+    for user_id, steam_id in USER_STEAM_IDS.items():
+        try:
+            playtime_hours = get_dota2_playtime_command(types.Message(from_user=types.User(id=int(user_id))))
+            if playtime_hours > 0:
+                playtime_data.append((user_id, playtime_hours))
+        except Exception as e:
+            logger.error(f"Ошибка при обработке пользователя {user_id}: {e}")
+
+    # Сортируем по количеству часов
+    playtime_data.sort(key=lambda x: x[1], reverse=True)
+
+    if not playtime_data:
+        bot.reply_to(message, "В чате никто не привязал Steam ID или никто не играл в Dota 2.")
+        return
+
+    # Формируем сообщение с топом
+    response = "🏆 Топ игроков Dota 2:\n"
+    for idx, (user_id, hours) in enumerate(playtime_data, start=1):
+        response += f"{idx}. [Пользователь {user_id}](tg://user?id={user_id}) — {hours} часов\n"
+
+    bot.reply_to(message, response, parse_mode="Markdown")
 
 # Webhook маршруты
 @app.route(f"/{TOKEN}", methods=['POST'])
