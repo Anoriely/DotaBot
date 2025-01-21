@@ -181,7 +181,7 @@ def get_dota2_playtime_command(steam_id):
         playtime_minutes = games[0].get("playtime_forever", 0)
         hours = playtime_minutes // 60
         logger.info(f"Steam ID {steam_id} сыграл в Dota 2 {hours} часов ({playtime_minutes} минут).")
-        return playtime_minutes
+        return hours
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Ошибка подключения к Steam API: {e}")
