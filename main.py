@@ -167,8 +167,13 @@ def get_dota2_playtime_command(message):
         return
 
     try:
+        payload = {
+            "steamid": steam_id,
+            "appids_filter": [DOTA_APP_ID],
+            "include_played_free_games": True
+        }
         url = (f"http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/"
-               f"?key={STEAM_API_KEY}&steamid={steam_id}&format=json")
+               f"?key={STEAM_API_KEY}&format=json&input_json={json.dumps(payload)}")
         logger.info(f"Отправка запроса к Steam API: {url}")
         response = requests.get(url)
 
@@ -198,6 +203,7 @@ def get_dota2_playtime_command(message):
     except Exception as e:
         logger.error(f"Неизвестная ошибка: {e}")
         bot.reply_to(message, "Не удалось получить данные. Попробуйте позже.")
+
 
 
 # Webhook маршруты
