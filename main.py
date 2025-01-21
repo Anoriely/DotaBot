@@ -61,7 +61,7 @@ def is_recent_message(message):
 # Команды бота
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    bot.reply_to(message, "Привет! Я бот для игр и статистики. Введите /help для списка команд.")
+    bot.reply_to(message, "Привет! Я бот для игр и статистики.")
 
 
 @bot.message_handler(commands=['slot'])
@@ -155,6 +155,7 @@ def register_steam_id(message):
 @bot.message_handler(commands=['time_dota'])
 def get_dota2_playtime_command(message):
     if not is_recent_message(message):
+        logger.info("Сообщение старше 5 минут, игнорируем.")
         return
 
     user_id = str(message.from_user.id)
@@ -162,22 +163,40 @@ def get_dota2_playtime_command(message):
 
     if not steam_id:
         bot.reply_to(message, "Ваш Steam ID не привязан. Используйте /regsteam.")
+        logger.info(f"Пользователь {user_id} запросил данные без привязанного Steam ID.")
         return
 
     try:
         url = (f"http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/"
                f"?key={STEAM_API_KEY}&steamid={steam_id}&format=json")
-        response = requests.get(url).json()
-        games = response.get("response", {}).get("games", [])
+        logger.info(f"Отправка запроса к Steam API: {url}")
+        response = requests.get(url)
+
+        if response.status_code != 200:
+            logger.error(f"Ошибка HTTP {response.status_code} при запросе к Steam API: {response.text}")
+            bot.reply_to(message, "Ошибка подключения к Steam API. Попробуйте позже.")
+            return
+
+        response_data = response.json()
+        logger.debug(f"Ответ от Steam API: {response_data}")
+
+        games = response_data.get("response", {}).get("games", [])
         dota2 = next((game for game in games if game["appid"] == DOTA_APP_ID), None)
 
         if dota2:
             hours = dota2.get("playtime_forever", 0) // 60
+            logger.info(f"Пользователь {user_id} сыграл в Dota 2 {hours} часов.")
             bot.reply_to(message, f"Вы сыграли в Dota 2: {hours} часов.")
         else:
+            logger.info(f"Dota 2 не найдена в библиотеке пользователя {user_id}.")
             bot.reply_to(message, "Вы не играли в Dota 2 или профиль скрыт.")
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Ошибка подключения к Steam API: {e}")
+        bot.reply_to(message, "Ошибка подключения к Steam API. Попробуйте позже.")
+
     except Exception as e:
-        logger.error(f"Ошибка API Steam: {e}")
+        logger.error(f"Неизвестная ошибка: {e}")
         bot.reply_to(message, "Не удалось получить данные. Попробуйте позже.")
 
 
