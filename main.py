@@ -151,7 +151,6 @@ def register_steam_id(message):
 
     bot.reply_to(message, f"Ваш Steam ID: {steam_id} успешно привязан!")
 
-
 def get_dota2_playtime_command(steam_id):
     try:
         payload = {
@@ -159,8 +158,10 @@ def get_dota2_playtime_command(steam_id):
             "appids_filter": [DOTA_APP_ID],
             "include_played_free_games": True
         }
+        # Формируем URL без пробелов в JSON
+        input_json = json.dumps(payload, separators=(',', ':'))
         url = (f"http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/"
-               f"?key={STEAM_API_KEY}&format=json&input_json={json.dumps(payload)}")
+               f"?key={STEAM_API_KEY}&format=json&input_json={input_json}")
         logger.info(f"Отправка запроса к Steam API: {url}")
         response = requests.get(url)
 
@@ -172,15 +173,15 @@ def get_dota2_playtime_command(steam_id):
         logger.debug(f"Ответ от Steam API: {response_data}")
 
         games = response_data.get("response", {}).get("games", [])
-        dota2 = next((game for game in games if game["appid"] == DOTA_APP_ID), None)
-
-        if dota2:
-            hours = dota2.get("playtime_forever", 0) // 60
-            logger.info(f"Steam ID {steam_id} сыграл в Dota 2 {hours} часов.")
-            return hours
-        else:
+        if not games:
             logger.info(f"Dota 2 не найдена в библиотеке Steam ID {steam_id}.")
             return 0
+
+        # Единственная игра в списке
+        playtime_minutes = games[0].get("playtime_forever", 0)
+        hours = playtime_minutes // 60
+        logger.info(f"Steam ID {steam_id} сыграл в Dota 2 {hours} часов ({playtime_minutes} минут).")
+        return playtime_minutes
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Ошибка подключения к Steam API: {e}")
@@ -189,6 +190,7 @@ def get_dota2_playtime_command(steam_id):
     except Exception as e:
         logger.error(f"Неизвестная ошибка: {e}")
         return None
+
 
 @bot.message_handler(commands=['time_dota'])
 def time_dota2_playtime(message):
