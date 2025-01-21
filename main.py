@@ -152,20 +152,7 @@ def register_steam_id(message):
     bot.reply_to(message, f"Ваш Steam ID: {steam_id} успешно привязан!")
 
 
-@bot.message_handler(commands=['time_dota'])
-def get_dota2_playtime_command(message):
-    if not is_recent_message(message):
-        logger.info("Сообщение старше 5 минут, игнорируем.")
-        return
-
-    user_id = str(message.from_user.id)
-    steam_id = USER_STEAM_IDS.get(user_id)
-
-    if not steam_id:
-        bot.reply_to(message, "Ваш Steam ID не привязан. Используйте /regsteam.")
-        logger.info(f"Пользователь {user_id} запросил данные без привязанного Steam ID.")
-        return
-
+def get_dota2_playtime_command(steam_id):
     try:
         payload = {
             "steamid": steam_id,
@@ -179,8 +166,7 @@ def get_dota2_playtime_command(message):
 
         if response.status_code != 200:
             logger.error(f"Ошибка HTTP {response.status_code} при запросе к Steam API: {response.text}")
-            bot.reply_to(message, "Ошибка подключения к Steam API. Попробуйте позже.")
-            return
+            return None
 
         response_data = response.json()
         logger.debug(f"Ответ от Steam API: {response_data}")
@@ -190,19 +176,42 @@ def get_dota2_playtime_command(message):
 
         if dota2:
             hours = dota2.get("playtime_forever", 0) // 60
-            logger.info(f"Пользователь {user_id} сыграл в Dota 2 {hours} часов.")
-            bot.reply_to(message, f"Вы сыграли в Dota 2: {hours} часов.")
+            logger.info(f"Steam ID {steam_id} сыграл в Dota 2 {hours} часов.")
+            return hours
         else:
-            logger.info(f"Dota 2 не найдена в библиотеке пользователя {user_id}.")
-            bot.reply_to(message, "Вы не играли в Dota 2 или профиль скрыт.")
+            logger.info(f"Dota 2 не найдена в библиотеке Steam ID {steam_id}.")
+            return 0
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Ошибка подключения к Steam API: {e}")
-        bot.reply_to(message, "Ошибка подключения к Steam API. Попробуйте позже.")
+        return None
 
     except Exception as e:
         logger.error(f"Неизвестная ошибка: {e}")
-        bot.reply_to(message, "Не удалось получить данные. Попробуйте позже.")
+        return None
+
+@bot.message_handler(commands=['time_dota'])
+def time_dota2_playtime(message):
+    if not is_recent_message(message):
+        logger.info("Сообщение старше 5 минут, игнорируем.")
+        return
+
+    user_id = str(message.from_user.id)
+    steam_id = USER_STEAM_IDS.get(user_id)
+
+    if not steam_id:
+        bot.reply_to(message, "Ваш Steam ID не привязан. Используйте /regsteam.")
+        logger.info(f"Пользователь {user_id} запросил данные без привязанного Steam ID.")
+        return
+
+    hours = get_dota2_playtime_command(steam_id)
+
+    if hours is None:
+        bot.reply_to(message, "Ошибка подключения к Steam API. Попробуйте позже.")
+    elif hours == 0:
+        bot.reply_to(message, "Вы не играли в Dota 2 или профиль скрыт.")
+    else:
+        bot.reply_to(message, f"Вы сыграли в Dota 2: {hours} часов.")
 
 @bot.message_handler(commands=['top_dota'])
 def top_dota2_playtime(message):
@@ -218,11 +227,11 @@ def top_dota2_playtime(message):
 
     for user_id, steam_id in USER_STEAM_IDS.items():
         try:
-            playtime_hours = get_dota2_playtime_command(types.Message(from_user=types.User(id=int(user_id))))
-            if playtime_hours > 0:
-                playtime_data.append((user_id, playtime_hours))
+            hours = get_dota2_playtime_command(steam_id)
+            if hours is not None and hours > 0:
+                playtime_data.append((user_id, hours))
         except Exception as e:
-            logger.error(f"Ошибка при обработке пользователя {user_id}: {e}")
+            logger.error(f"Ошибка при обработке Steam ID {steam_id} пользователя {user_id}: {e}")
 
     # Сортируем по количеству часов
     playtime_data.sort(key=lambda x: x[1], reverse=True)
@@ -237,6 +246,7 @@ def top_dota2_playtime(message):
         response += f"{idx}. [Пользователь {user_id}](tg://user?id={user_id}) — {hours} часов\n"
 
     bot.reply_to(message, response, parse_mode="Markdown")
+
 
 # Webhook маршруты
 @app.route(f"/{TOKEN}", methods=['POST'])
