@@ -57,6 +57,12 @@ def is_recent_message(message):
     #Проверяет, является ли сообщение недавним.
     return message.date >= (bot_start_time - timedelta(minutes=5)).timestamp()
 
+def get_username(user_id):
+    try:
+        user = bot.get_chat(user_id)
+        return user.username or f"User_{user_id}"
+    except Exception as e:
+        return f"User_{user_id} {e}"
 
 # Команды бота
 @bot.message_handler(commands=['start'])
@@ -70,7 +76,37 @@ def slot_machine(message):
         return
 
     fruits = ['🍎', '🍊', '🍋', '🍒', '🍇', '🍉', '🍓']
-    row1, row2, row3 = [random.choices(fruits, k=3) for _ in range(3)]
+
+    if str(message.from_user.id) == str(BOSS_USER_ID):
+        win_chance = 0.8
+    else:
+        win_chance = 0
+
+    # Генерируем строки
+    if random.random() < win_chance:
+        # Генерируем выигрышную комбинацию
+        winning_fruit = random.choice(fruits)
+        row1 = [winning_fruit] * 3
+        row2 = [random.choice(fruits) for _ in range(3)]
+        row3 = [random.choice(fruits) for _ in range(3)]
+
+        # Случайным образом выбираем, на каком ряду или диагонали будет выигрыш
+        win_type = random.choice(['row1', 'row2', 'row3', 'diag1', 'diag2'])
+        if win_type == 'row2':
+            row2 = [winning_fruit] * 3
+        elif win_type == 'row3':
+            row3 = [winning_fruit] * 3
+        elif win_type == 'diag1':
+            row1 = [winning_fruit, random.choice(fruits), random.choice(fruits)]
+            row2 = [random.choice(fruits), winning_fruit, random.choice(fruits)]
+            row3 = [random.choice(fruits), random.choice(fruits), winning_fruit]
+        elif win_type == 'diag2':
+            row1 = [random.choice(fruits), random.choice(fruits), winning_fruit]
+            row2 = [random.choice(fruits), winning_fruit, random.choice(fruits)]
+            row3 = [winning_fruit, random.choice(fruits), random.choice(fruits)]
+    else:
+        # Генерируем обычную комбинацию
+        row1, row2, row3 = [random.choices(fruits, k=3) for _ in range(3)]
 
     is_win = (
         row1[0] == row1[1] == row1[2] or
@@ -84,8 +120,8 @@ def slot_machine(message):
              f"{row2[0]} | {row2[1]} | {row2[2]}\n" \
              f"{row3[0]} | {row3[1]} | {row3[2]}"
 
-    message_text = "🎉 Вы выиграли! 🎉" if is_win else "😢 Попробуйте еще раз!"
-    bot.reply_to(message, f"🎰 Результат:\n{result}\n{message_text}")
+    message_text = "🎉 Поздравляем! Вы выиграли! 🎉" if is_win else "😢 Попробуйте еще раз!"
+    bot.reply_to(message, f"🎰 Турик-слоты 🎰 \n{result} \n{message_text}")
 
 
 @bot.message_handler(commands=['howgay'])
@@ -118,7 +154,7 @@ def ping_users(message):
     if not is_recent_message(message):
         return
 
-    mention_text = "Эй, Тузы, время в Доту!\n" + "\n".join([
+    mention_text = "Эй, Тузы, время жестко зайти в Доту!\n" + "\n".join([
         f"[{user['first_name']}](tg://user?id={user['id']})" for user in PING_LIST
     ])
 
@@ -243,9 +279,10 @@ def top_dota2_playtime(message):
         return
 
     # Формируем сообщение с топом
-    response = "🏆 Топ игроков Dota 2:\n"
+    response = "🏆 Топ пробитых Тузов в Dota 2 🌈: \n"
     for idx, (user_id, hours) in enumerate(playtime_data, start=1):
-        response += f"{idx}. [Пользователь {user_id}](tg://user?id={user_id}) — {hours} часов\n"
+        username = get_username(user_id)
+        response += f"{idx}. [{username}](tg://user?id={user_id}) — {hours} часов \n"
 
     bot.reply_to(message, response, parse_mode="Markdown")
 
@@ -253,10 +290,15 @@ def top_dota2_playtime(message):
 # Webhook маршруты
 @app.route(f"/{TOKEN}", methods=['POST'])
 def get_message():
-    json_str = request.get_data().decode('UTF-8')
-    update = types.Update.de_json(json_str)
-    bot.process_new_updates([update])
-    return 'OK', 200
+    try:
+        json_str = request.get_data().decode('UTF-8')
+        logging.info(f"From Telegram: {json_str}")
+        update = types.Update.de_json(json_str)
+        bot.process_new_updates([update])
+        return 'OK', 200
+    except Exception as e:
+        logging.error(f"Error: {e}")
+        return 'Server Error', 500
 
 @app.route('/')
 def index():
