@@ -9,8 +9,21 @@ from datetime import datetime, timezone, timedelta
 import requests
 
 # Настройка логирования
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+            log_record = {
+                "severity": "info",  # Заменяем "error" на "info"
+                "timestamp": self.formatTime(record),
+                "message": record.getMessage(),
+                "level": record.levelname.lower()
+            }
+            return json.dumps(log_record)
+
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+handler.setFormatter(JSONFormatter())
+logger.addHandler(handler)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 # Константы
 TOKEN = os.getenv("TELEGRAM_TOKEN")
