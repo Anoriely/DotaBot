@@ -9,7 +9,7 @@ from datetime import datetime, timezone, timedelta
 import requests
 
 # Настройка логирования
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Константы
@@ -121,7 +121,7 @@ def slot_machine(message):
              f"{row3[0]} | {row3[1]} | {row3[2]}"
 
     message_text = "🎉 Поздравляем! Вы выиграли! 🎉" if is_win else "😢 Попробуйте еще раз!"
-    bot.reply_to(message, f"🎰 Турик-слоты 🎰 \n{result} \n{message_text}")
+    bot.reply_to(message, f"🎰 Турик-слоты 🎰 \n \n{result}\n \n{message_text}")
 
 
 @bot.message_handler(commands=['howgay'])
@@ -292,7 +292,7 @@ def top_dota2_playtime(message):
 def get_message():
     try:
         json_str = request.get_data().decode('UTF-8')
-        logging.info(f"From Telegram: {json_str}")
+        logging.info(f"From Telegram: {json.dumps(json_str)}")
         update = types.Update.de_json(json_str)
         bot.process_new_updates([update])
         return 'OK', 200
