@@ -313,6 +313,15 @@ def get_message():
         logging.error(f"Error: {e}")
         return 'Server Error', 500
 
+# Ответ Донису
+DONIS_USER_ID = 462026826
+SPECIAL_RESPONSE_TEXT = "-"
+
+@bot.message_handler(func=lambda message: str(message.from_user.id) == str(SPECIAL_USER_ID))
+def special_user_response(message):
+    bot.reply_to(message, SPECIAL_RESPONSE_TEXT)
+
+
 @app.route('/')
 def index():
     return 'Webhook is active!', 200
