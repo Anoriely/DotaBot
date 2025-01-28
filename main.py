@@ -317,7 +317,7 @@ def get_message():
 DONIS_USER_ID = 462026826
 SPECIAL_RESPONSE_TEXT = "-"
 
-@bot.message_handler(func=lambda message: str(message.from_user.id) == str(SPECIAL_USER_ID))
+@bot.message_handler(func=lambda message: str(message.from_user.id) == str(DONIS_USER_ID))
 def special_user_response(message):
     bot.reply_to(message, SPECIAL_RESPONSE_TEXT)
 
