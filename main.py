@@ -8,21 +8,7 @@ from telebot import TeleBot, types
 from datetime import datetime, timezone, timedelta
 import requests
 
-# Настройка логирования
-class JSONFormatter(logging.Formatter):
-    def format(self, record):
-            log_record = {
-                "severity": "info",  # Заменяем "error" на "info"
-                "timestamp": self.formatTime(record),
-                "message": record.getMessage(),
-                "level": record.levelname.lower()
-            }
-            return json.dumps(log_record)
-
 logger = logging.getLogger()
-handler = logging.StreamHandler()
-handler.setFormatter(JSONFormatter())
-logger.addHandler(handler)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Константы
@@ -299,6 +285,13 @@ def top_dota2_playtime(message):
 
     bot.reply_to(message, response, parse_mode="Markdown")
 
+# Ответ Донису
+DONIS_USER_ID = 462026826
+SPECIAL_RESPONSE_TEXT = "-"
+
+@bot.message_handler(func=lambda message: str(message.from_user.id) == str(DONIS_USER_ID))
+def special_user_response(message):
+    bot.reply_to(message, SPECIAL_RESPONSE_TEXT)
 
 # Webhook маршруты
 @app.route(f"/{TOKEN}", methods=['POST'])
@@ -312,14 +305,6 @@ def get_message():
     except Exception as e:
         logging.error(f"Error: {e}")
         return 'Server Error', 500
-
-# Ответ Донису
-DONIS_USER_ID = 462026826
-SPECIAL_RESPONSE_TEXT = "-"
-
-@bot.message_handler(func=lambda message: str(message.from_user.id) == str(DONIS_USER_ID))
-def special_user_response(message):
-    bot.reply_to(message, SPECIAL_RESPONSE_TEXT)
 
 
 @app.route('/')
